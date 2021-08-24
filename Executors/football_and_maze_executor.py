@@ -1,7 +1,17 @@
 import random
+import sys
+
+from pddlsim.executors.executor import Executor
+from pddlsim.local_simulator import LocalSimulator
+
 
 from Executors_helpers.bfs import bfs, get_min_path
-from  executor import Executor
+
+sys.path.append("/usr/local/lib/python2.7/dist-packages")
+
+domain = sys.argv[1]
+problem = sys.argv[2]
+
 
 class BehaviorBaseExecutor(Executor):
 
@@ -14,7 +24,6 @@ class BehaviorBaseExecutor(Executor):
 
     def initialize(self, services):
         self.services = services
-        self.number_of_objects = len(self.services.parser.objects)
         self.generate_graph(self.services.parser.domain_name)
         # find the interesting balls and  init the state (False = not in goal)
         # goals = self.get_goals(self.services.goal_tracking.uncompleted_goals[0])
@@ -195,9 +204,8 @@ class BehaviorBaseExecutor(Executor):
                     path = i[1][action['to']]
                     error_path = i[1][action['error']]
 
-
             # check the exceptions and threat them as necessary
-            if len(path) == 0 or (error_path is None and action['name'] == 'kick') \
+            if len(path) == 0 or action['from'] in path or (error_path is None and action['name'] == 'kick') \
                     or (error_path is not None and len(error_path) == 0):
                 weight = 0
 
@@ -206,12 +214,13 @@ class BehaviorBaseExecutor(Executor):
                 if action['name'] == 'kick':
                     error_weight = (self.number_of_balls_in_path(error_path)) * (0.2 / len(error_path))
                     weight += error_weight
-                    weight *= self.number_of_objects
+                    weight *= 10
                     if action['ball'] not in [i[0][0] for i in self.interesting_balls]:
                         weight = 0
             weights.append(weight)
 
-        return options[weights.index(max(weights))]
+        x = options[weights.index(max(weights))]
+        return x
 
     def maze_best_option(self, options):
         persons = {i[0]: i[1] for i in self.services.perception.state['at']}
@@ -294,4 +303,3 @@ class BehaviorBaseExecutor(Executor):
                     closest_distance = dist[place[1]]
                     closest_place = place[1]
         self.sp_graph = self.find_shortest_path(closest_place)
-

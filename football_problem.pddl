@@ -86,6 +86,6 @@
 
 )
 (:goal
-    (and (at-ball ball1 goal_tile))
+    (and (at-ball ball1 goal_tile) (at-ball ball2 goal_tile))
 	)
 )

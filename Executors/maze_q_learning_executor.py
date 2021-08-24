@@ -2,18 +2,19 @@ import json
 
 import numpy as np
 from executor import Executor
-
+from Executors_helpers.config_file import *
+import os
 
 class RLExecutor(Executor):
 
     def __init__(self, flag, policy_file):
         super(RLExecutor, self).__init__()
-        self.policy_file = policy_file
+        self.policy_file = os.path.join(os.getcwd(),os.path.join("policy_files"),policy_file)
         self.visited ={}
         self.learning_rate = LEARNING_RATE
         self.gamma = GAMMA
         self.epsilon_greedy = EPSILON_GREEDY
-        self.initialize_Q_table(policy_file)
+        self.initialize_Q_table()
         self.last_option= ""
         if flag == "-L":
             self.learning = True
@@ -29,7 +30,8 @@ class RLExecutor(Executor):
                 self.data[block[0]] = {}
             self.visited[block[0]] = 0.9
             self.data['cheese'] = []
-
+        if self.learning and self.data['count'] >= len(self.data)/5:
+            exit(128)
         if K_EPSILON < 0:
             self.k_epslion = 1-(1/(float(len(self.data))))
         else:
@@ -122,12 +124,14 @@ class RLExecutor(Executor):
         a_file.close()
 
 
-    def initialize_Q_table(self,policy_file):
-        if os.path.exists(policy_file) and os.stat(policy_file).st_size != 0:
+    def initialize_Q_table(self):
+
+        if os.path.exists(self.policy_file) and os.stat(self.policy_file).st_size != 0:
             self.first_learning = False
-            with open(policy_file) as json_file:
+            with open(self.policy_file) as json_file:
                 self.data = json.load(json_file)
+                self.data['count']+=1
         else:
             self.first_learning = True
-            self.data = {}
+            self.data = {'count':0}
 
