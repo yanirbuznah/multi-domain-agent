@@ -69,21 +69,22 @@ if __name__ == '__main__':
     #print LocalSimulator().run(domain,problem,RLExecutor("-L","x"))
     total_execute_times = []
     total_execute_actions = []
+    if flag == "-L":
+        for j in range(1):
 
-    for j in range(3):
-
-        total_actions = []
-        total_times = []
-        for i in range(10):
-            x = LocalSimulator().run(domain,problem,Learner("policy_maze"))
-            total_actions.append(x.total_actions)
-            total_times.append(float(x.total_time)/60)
-            print x
-            print "i:", i , "j:", j
-            sleep(10)
-        print "Total actions:", total_actions
-        print "Total times:", total_times
-        x =  LocalSimulator().run(domain,problem,Executive("policy_maze"))
+            total_actions = []
+            total_times = []
+            for i in range(1):
+                x = LocalSimulator().run(domain,problem,Learner("policy_maze"))
+                total_actions.append(x.total_actions)
+                total_times.append(float(x.total_time)/60)
+                print x
+                print "i:", i , "j:", j
+                sleep(10)
+            print "Total actions:", total_actions
+            print "Total times:", total_times
+    else:
+        x = LocalSimulator().run(domain,problem,Executive("policy_maze"))
         total_execute_actions.append(x.total_actions)
         total_execute_times.append(float(x.total_time)/60)
         print x

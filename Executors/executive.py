@@ -8,7 +8,7 @@ import numpy as np
 from pddlsim.parser_independent import *
 from Executors.Executors_helpers.hasing_states import make_hash_sha256
 from executor import Executor
-
+from Executors_helpers.customized_valid_actions import CustomizedValidActions
 import os
 
 
@@ -35,9 +35,13 @@ class Executive(Executor):
         self.services = services
         self.actions = {}
         self.num_of_actions = len(self.actions)
-        self.data['start'] = make_hash_sha256(self.services.parser.initial_state)
         self.rmax = self.get_rmax(self.services.goal_tracking.uncompleted_goals[0])
-        finish_state = self.data['finish_state']
+        self.finish_states = self.data['finish_states']
+        for state in self.finish_states:
+            if self.get_number_of_uncompleted_goals(self.services.goal_tracking.uncompleted_goals[0], self.finish_states[state]) >0:
+                del self.finish_states[state]
+        self.cheese_moved = len(self.finish_states) == 0
+
 
         for i in self.services.valid_actions.provider.parser.actions:
 
@@ -70,7 +74,7 @@ class Executive(Executor):
 
     def get_reward (self,goal,state):
         # -1 for every additional step
-        return self.rmax - self.get_number_of_uncompleted_goals(goal,state) - 1
+        return self.rmax - self.get_number_of_uncompleted_goals(goal,state)
 
     def get_number_of_uncompleted_goals(self,goal,state,r = 0):
         if isinstance(goal,Literal):
@@ -105,19 +109,12 @@ class Executive(Executor):
         options = self.services.valid_actions.get()
         hash_state = make_hash_sha256(state)
         if self.services.goal_tracking.reached_all_goals():
-
-            self.model[hash_state] = {'r':1000, 'q':1000,'actions':{},'visited':1}
-            self.data['finish_state'] = state
-            self.update_Q_table(self.last_state,self.last_action,hash_state,1000)
-            self.save_Q_table_to_file()
             return None
         if len(options) == 0:
             return None
 
         if self.count == 1:
             self.data['start'] = hash_state
-        # if self.count % 1000 == 0:
-        #     self.save_Q_table_to_file()
 
         if hash_state not in self.model:
             reward = q_reward = self.get_reward(self.services.goal_tracking.uncompleted_goals[0],state)
@@ -127,9 +124,7 @@ class Executive(Executor):
             reward = self.model[hash_state]['r']
             self.model[hash_state]['visited']+=1
 
-        # self.update_Q_table(self.last_state,self.last_action,hash_state,reward)
         self.last_action = self.change_repeated_action(self.pick_best_option(options,hash_state,reward),options,hash_state)
-        #self.last_action = self.change_repeated_action(self.pick_best_option(options,hash_state,reward),options,hash_state)
         self.last_last_state = self.last_state
         self.last_state = hash_state
         return self.last_action
@@ -269,7 +264,75 @@ class Executive(Executor):
     def get_action_from_grounded_action(self,action):
         return action.split(" ")[0][1:]
 
-    def pick_best_option(self,options,hash_state,reward,count = 0):
+
+    def look_ahed(self,state,k,t,valid_action):
+        options = valid_action.get(state)
+        r = self.get_reward(self.services.goal_tracking.uncompleted_goals[0],state)
+        if k == 0 or len(options) == 0:
+            return [r]
+        hash_state = make_hash_sha256(state)
+        if hash_state not in self.model:
+            self.model[hash_state] = {'r':r, 'q':r, 'actions':{},'visited':1}
+
+        state_rewards = []
+        for i in range(t):
+            option = self.pick_random_action_with_reward_calc(options)
+            action = self.get_action_from_grounded_action(option)
+            probs =self.get_probs_from_option(action)
+            probs_per_states = self.get_probabilistic_per_state(option,probs,{})
+            self.model[hash_state]['actions'][option] = probs_per_states
+            tested_state = self.services.parser.copy_state(state)
+            log = open("myprog.log", "w+")
+            stdout = sys.stdout
+            sys.stdout = log
+            self.services.parser.apply_action_to_state(option,tested_state,check_preconditions=False)
+            self.services.parser.apply_revealable_predicates(tested_state)
+            log.close()
+            sys.stdout = stdout
+            del log
+            state_rewards += self.look_ahed(tested_state,k-1,t,valid_action)
+        self.model[hash_state]['v'] = sum(state_rewards)/t
+        return state_rewards
+
+    def pick_random_action_from_model(self,hash_state):
+        actions = self.model[hash_state]['actions']
+        return random.choice(actions.keys())
+
+
+
+    def mc_control(self,hash_state,k,t):
+        if hash_state not in self.model:
+            self.model[hash_state] = {'r': 0, 'q': 0, 'actions': {}, 'visited': 1}
+        if k == 0 or len(self.model[hash_state]['actions']) == 0:
+            return [self.model[hash_state]['r']]
+        state_rewards = []
+        for i in range(t):
+            option = self.pick_random_action_from_model(hash_state)
+            state_rewards += self.mc_control(self.get_state_from_action(self.model[hash_state]['actions'][option]),k-1,t)
+        self.model[hash_state]['v'] = sum(state_rewards)/(t*k)
+        return state_rewards
+
+    def get_state_from_action(self,action):
+        state = ""
+        prob_state = 0
+        for a in action:
+            if a != 'q' and a!= 'r':
+                if action[a] > prob_state:
+                    prob_state = action[a]
+                    state = a
+        return state
+
+    def pick_best_option(self,options,hash_state,reward):
+
+        if self.cheese_moved:
+            x = self.look_ahed(self.services.perception.get_state(), 2, 5,
+                               CustomizedValidActions(self.services.parser, self.services.perception))
+
+        else:
+            x = self.mc_control(hash_state,4,4)
+            fd =2
+
+
         if len(self.model[hash_state]['actions']) > 0:
             max_option = self.get_best_action(hash_state)
             return max_option
@@ -289,15 +352,6 @@ class Executive(Executor):
         else:
             probs_per_states = self.model[hash_state]['actions'][option]
             self.update_policy(reward,probs_per_states['r'],action)
-        #     if count < 10:
-        #         return self.pick_best_option(options,hash_state,reward,count+1)
-        #     else:
-        #         option = self.pick_random_action(options)
-        # try:
-        #     self.update_policy(reward,probs_per_states['q'],action)
-        #     #self.update_policy(reward,probs_per_states['r'],action)
-        # except:
-        #     x = 2
         return option
 
     def update_policy(self,prev_r,reward,action):
@@ -327,6 +381,7 @@ class Executive(Executor):
                 max_option_reward = self.model[state]['actions'][i]['q']
                 max_action = i
         return max_action
+
     def get_best_reward(self,state):
         max_option_reward = 0
         max_action = None
@@ -339,38 +394,19 @@ class Executive(Executor):
         return max_option_reward
 
 
-    def planning_step(self):
-        for _ in range(5):
-            action = ""
-            while action == "":
-                state1 = random.choice(list(self.model))
-                if len(self.model[state1]['actions']) != 0:
-                    action = random.choice(list(self.model[state1]['actions']))
-            for state in self.model[state1]['actions'][action]:
-                if state != 'r' and state != 'q' and state!= 'tau':
-                    try:
-                        r = self.model[state]['r'] + self.kappa * np.sqrt(self.model[state1]['actions'][action]['tau'])
-                        self.update_Q_table(state1,action,state,r)
-                    except:
-                        pass
-
-
-    def save_Q_table_to_file(self):
-        self.data['model'] = self.model
-        a_file = open(self.policy_file, "w")
-        cPickle.dump(self.data, a_file)
-        a_file.close()
-
     def initialize_Q_table(self):
-        if os.path.exists(self.policy_file) and os.stat(self.policy_file).st_size != 0:
-            self.first_learning = False
-            with open(self.policy_file) as file:
-                self.data = cPickle.load(file)
-                self.data['count']+=1
-                self.model = self.data['model']
-        else:
-            self.first_learning = True
-            self.data = {'count':0}
-            self.model = {self.last_state:{'r':0,'q':0,'actions':{self.last_action:{'tau':1,'r':0,'q':0}},'visited':1}}
+
+            if os.path.exists(self.policy_file) and os.stat(self.policy_file).st_size != 0:
+                self.first_learning = False
+                with open(self.policy_file) as file:
+                    self.data = cPickle.load(file)
+                    self.data['count']+=1
+                    self.model = self.data['model']
+
+            else:
+                self.first_learning = True
+                self.data = {'count':0}
+                self.model = {self.last_state:{'r':0,'q':0,'actions':{self.last_action:{'tau':1,'r':0,'q':0}},'visited':1}}
+                self.data['finish_states'] = {}
 
 

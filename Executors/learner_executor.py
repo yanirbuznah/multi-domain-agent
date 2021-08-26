@@ -105,16 +105,17 @@ class Learner(Executor):
         if self.services.goal_tracking.reached_all_goals():
 
             self.model[hash_state] = {'r':1000, 'q':1000,'actions':{},'visited':1}
-            self.data['finish_state'] = state
+      #      self.data['finish_states'].add(state)
+            self.data['finish_states'][hash_state] = state
             self.update_Q_table(self.last_state,self.last_action,hash_state,1000)
-            self.save_Q_table_to_file()
+            self.save_Q_table_to_file(finish = True, finial_state = hash_state)
             return None
         if len(options) == 0:
             return None
 
         if self.count == 1:
             self.data['start'] = hash_state
-        if self.count % 1000 == 0:
+        if self.count % 5000 == 0:
             self.save_Q_table_to_file()
 
         if hash_state not in self.model:
@@ -355,7 +356,14 @@ class Learner(Executor):
                         pass
 
 
-    def save_Q_table_to_file(self):
+    def save_Q_table_to_file(self, finish = False, finial_state = None):
+        if finish:
+            for q in self.model:
+                if len(self.model[q]['actions']) == 0:
+                    if q not in self.data['finish_states'].keys():
+                        x=5
+
+
         self.data['model'] = self.model
         a_file = open(self.policy_file, "w")
         start = timer()
@@ -373,7 +381,7 @@ class Learner(Executor):
                 self.model = self.data['model']
         else:
             self.first_learning = True
-            self.data = {'count':0}
+            self.data = {'count':0, 'finish_states':{}}
             self.model = {self.last_state:{'r':0,'q':0,'actions':{self.last_action:{'tau':1,'r':0,'q':0}},'visited':1}}
 
 
