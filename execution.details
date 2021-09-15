@@ -1,0 +1,16 @@
+Plan found with cost: 9
+1. (MOVE-EAST0 PERSON1 C5 C6)
+2. (MOVE-EAST0 PERSON1 C6 C7)
+3. (MOVE-EAST0 PERSON1 C7 C8)
+4. (MOVE-NORTH2 PERSON1 C8 G0 C7)
+5. (MOVE-NORTH1 PERSON1 G0 G1 C8)
+6. (MOVE-NORTH0 PERSON1 G1 G2)
+7. (MOVE-NORTH0 PERSON1 G2 G3)
+8. (MOVE-NORTH1 PERSON1 G3 G4 G2)
+9. (PICK-FOOD PERSON1 G4 FOOD1)
+Time: 0.000387
+Generated: 0
+Expanded: 0
+Total time: 0.000396
+Nodes generated during search: 58
+Nodes expanded during search: 47

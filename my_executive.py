@@ -65,22 +65,23 @@ if __name__ == '__main__':
   #  print LocalSimulator().run(domain,problem,Learner("POLICY_Learner_working"))
     #deterministic_domain = create_deterministic_domain(domain)
     deterministic_domain = create_deterministic_domain(domain)
-    #print LocalSimulator().run(domain,problem,LearningExecutor(deterministic_domain))
+    print LocalSimulator().run(domain,problem,LearningExecutor(deterministic_domain))
+    sleep(10)
     #print LocalSimulator().run(domain,problem,RLExecutor("-L","x"))
     total_execute_times = []
     total_execute_actions = []
     if flag == "-L":
-        for j in range(1):
+        for j in range(4):
 
             total_actions = []
             total_times = []
-            for i in range(1):
+            for i in range(5):
                 x = LocalSimulator().run(domain,problem,Learner("policy_maze"))
                 total_actions.append(x.total_actions)
                 total_times.append(float(x.total_time)/60)
                 print x
                 print "i:", i , "j:", j
-                sleep(10)
+                sleep(5)
             print "Total actions:", total_actions
             print "Total times:", total_times
     else:

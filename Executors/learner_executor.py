@@ -4,7 +4,7 @@ import random
 import sys
 
 import numpy as np
-
+from Executors.Executors_helpers.goals_parser_helpers import *
 from pddlsim.parser_independent import *
 from Executors.Executors_helpers.hasing_states import make_hash_sha256
 from executor import Executor
@@ -35,18 +35,21 @@ class Learner(Executor):
         self.services = services
         self.actions = {}
         self.num_of_actions = len(self.actions)
+
         self.data['start'] = make_hash_sha256(self.services.parser.initial_state)
         self.rmax = self.get_rmax(self.services.goal_tracking.uncompleted_goals[0])
         for i in self.services.valid_actions.provider.parser.actions:
 
             if isinstance(self.services.valid_actions.provider.parser.actions[i],ProbabilisticAction):
                 self.actions[i] = [self.services.valid_actions.provider.parser.actions[i].prob_list,self.rmax,1.0]
-              #  x = [i,self.services.valid_actions.provider.parser.actions[i].prob_list,self.rmax]
             else:
                 self.actions[i] = [[1],self.rmax,1.0]
-               # x = [i,[1],self.rmax]
 
-      #      self.actions.append(x)
+        if self.data['count'] == 0:
+            self.data['goals'] = [self.services.parser.goals[0]]
+        else:
+            if not check_if_goal_in_list(self.data['goals'],self.services.parser.goals[0]):
+                self.data['goals'].append(self.services.parser.goals[0])
 
 
 
@@ -104,11 +107,15 @@ class Learner(Executor):
         hash_state = make_hash_sha256(state)
         if self.services.goal_tracking.reached_all_goals():
 
+
+
             self.model[hash_state] = {'r':1000, 'q':1000,'actions':{},'visited':1}
       #      self.data['finish_states'].add(state)
             self.data['finish_states'][hash_state] = state
             self.update_Q_table(self.last_state,self.last_action,hash_state,1000)
-            self.save_Q_table_to_file(finish = True, finial_state = hash_state)
+#            self.save_Q_table_to_file(finish = True, finial_state = hash_state)
+
+            self.save_Q_table_to_file()
             return None
         if len(options) == 0:
             return None
@@ -355,15 +362,24 @@ class Learner(Executor):
                     except:
                         pass
 
+    #
+    # def save_Q_table_to_file(self, finish = False,finial_state ):
+    #     if finish:
+    #         for q in self.model:
+    #             if len(self.model[q]['actions']) == 0:
+    #                 if q not in self.data['finish_states'].keys():
+    #                     x=5
+    #
+    #
+    #     self.data['model'] = self.model
+    #     a_file = open(self.policy_file, "w")
+    #     start = timer()
+    #     cPickle.dump(self.data, a_file)
+    #     a_file.close()
+    #     print "time to save file: " ,timer() - start , "seconds"
+    #     print "size of the file:" ,float(os.stat(self.policy_file).st_size)/1048576, "MB"
 
-    def save_Q_table_to_file(self, finish = False, finial_state = None):
-        if finish:
-            for q in self.model:
-                if len(self.model[q]['actions']) == 0:
-                    if q not in self.data['finish_states'].keys():
-                        x=5
-
-
+    def save_Q_table_to_file(self):
         self.data['model'] = self.model
         a_file = open(self.policy_file, "w")
         start = timer()
@@ -372,6 +388,8 @@ class Learner(Executor):
         print "time to save file: " ,timer() - start , "seconds"
         print "size of the file:" ,float(os.stat(self.policy_file).st_size)/1048576, "MB"
 
+
+
     def initialize_Q_table(self):
         if os.path.exists(self.policy_file) and os.stat(self.policy_file).st_size != 0:
             self.first_learning = False
@@ -379,9 +397,10 @@ class Learner(Executor):
                 self.data = cPickle.load(file)
                 self.data['count']+=1
                 self.model = self.data['model']
+
         else:
             self.first_learning = True
-            self.data = {'count':0, 'finish_states':{}}
+            self.data = {'count':0, 'finish_states':{},'goals':[]}
             self.model = {self.last_state:{'r':0,'q':0,'actions':{self.last_action:{'tau':1,'r':0,'q':0}},'visited':1}}
 
 
