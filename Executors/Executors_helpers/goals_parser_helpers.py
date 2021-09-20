@@ -38,8 +38,19 @@ def check_equality(goal1,goal2):
             return True
     return False
 
-def check_if_goal_in_list(list_of_goals,goal):
-    for g in list_of_goals:
-        if check_equality(g,goal):
-            return True
-    return False
+def get_goal_index_from_correlation(list_of_goals,goal):
+    max_correlation = 0
+    max_goal_index = 0
+    for i in range(len(list_of_goals)):
+        current_correlation =get_correlation(goal,list_of_goals[i])
+        if current_correlation > max_correlation:
+            max_correlation = current_correlation
+            max_goal_index = i
+    return max_goal_index
+
+def get_goal_index_in_list(list_of_goals,goal):
+    for i in range(len(list_of_goals)):
+        if check_equality(list_of_goals[i],goal):
+            return i
+    list_of_goals.append(goal)
+    return len(list_of_goals) -1

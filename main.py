@@ -3,7 +3,7 @@ import os
 
 from pddlsim.local_simulator import LocalSimulator
 
-from Executors.planning_executor import PlanDispatcher
+from Executors.learning_from_plan_executor import PlanDispatcher
 from file_compare import find_current_files
 import sys
 import pandas as pd

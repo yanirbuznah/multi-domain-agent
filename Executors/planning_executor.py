@@ -12,7 +12,6 @@ class PlanDispatcher(Executor):
         self.steps = planner.make_plan(services.pddl.domain_path,services.pddl.problem_path)
         self.services = services
     def next_action(self):
-        options = self.services.valid_actions.get()
         if len(self.steps) > 0:
             return self.steps.pop(0).lower()
         return None

@@ -11,7 +11,7 @@ from executor import Executor
 from Executors_helpers.customized_valid_actions import CustomizedValidActions
 import os
 
-
+from Executors.Executors_helpers.goals_parser_helpers import *
 
 class Executive(Executor):
 
@@ -20,7 +20,7 @@ class Executive(Executor):
         self.last_state = "dum_state"
         self.last_action = "dum_action"
         self.policy_file = os.path.join(os.getcwd(),os.path.join("policy_files"),policy_file)
-        self.initialize_Q_table()
+
         self.count = 0
         self.gamma = 0.9
         self.learning_rate = 0.9
@@ -33,11 +33,12 @@ class Executive(Executor):
 
     def initialize(self,services):
         self.services = services
+        self.initialize_Q_table()
         self.actions = {}
         self.num_of_actions = len(self.actions)
         self.rmax = self.get_rmax(self.services.goal_tracking.uncompleted_goals[0])
         self.finish_states = self.data['finish_states']
-        for state in self.finish_states:
+        for state in list(self.finish_states.keys()):
             if self.get_number_of_uncompleted_goals(self.services.goal_tracking.uncompleted_goals[0], self.finish_states[state]) >0:
                 del self.finish_states[state]
         self.cheese_moved = len(self.finish_states) == 0
@@ -395,18 +396,30 @@ class Executive(Executor):
 
 
     def initialize_Q_table(self):
-
             if os.path.exists(self.policy_file) and os.stat(self.policy_file).st_size != 0:
                 self.first_learning = False
                 with open(self.policy_file) as file:
                     self.data = cPickle.load(file)
-                    self.data['count']+=1
-                    self.model = self.data['model']
+                self.data['count'] += 1
+                self.model_index = get_goal_index_from_correlation(self.data['goals'], self.services.parser.goals[0])
 
             else:
                 self.first_learning = True
-                self.data = {'count':0}
-                self.model = {self.last_state:{'r':0,'q':0,'actions':{self.last_action:{'tau':1,'r':0,'q':0}},'visited':1}}
-                self.data['finish_states'] = {}
+                self.model = {
+                    self.last_state: {'r': 0, 'q': 0, 'actions': {self.last_action: {'tau': 1, 'r': 0, 'q': 0}},
+                                      'visited': 1}}
+                self.data = {'count': 0, 'finish_states': {}, 'goals': [], 'models': []}
+                self.data['goals'] = [self.services.parser.goals[0]]
+                self.model_index = 0
+            try:
+                self.model = self.data['models'][self.model_index]
+            except:
+                self.model = {
+                    self.last_state: {'r': 0, 'q': 0, 'actions': {self.last_action: {'tau': 1, 'r': 0, 'q': 0}},
+                                      'visited': 1}}
+                self.data['models'].append(self.model)
+
+            self.data['start'] = make_hash_sha256(self.services.parser.initial_state)
+
 
 

@@ -20,7 +20,7 @@ class Learner(Executor):
         self.last_state = "dum_state"
         self.last_action = "dum_action"
         self.policy_file = os.path.join(os.getcwd(),os.path.join("policy_files"),policy_file)
-        self.initialize_Q_table()
+
         self.count = 0
         self.gamma = 0.9
         self.learning_rate = 0.9
@@ -36,7 +36,7 @@ class Learner(Executor):
         self.actions = {}
         self.num_of_actions = len(self.actions)
 
-        self.data['start'] = make_hash_sha256(self.services.parser.initial_state)
+
         self.rmax = self.get_rmax(self.services.goal_tracking.uncompleted_goals[0])
         for i in self.services.valid_actions.provider.parser.actions:
 
@@ -44,12 +44,7 @@ class Learner(Executor):
                 self.actions[i] = [self.services.valid_actions.provider.parser.actions[i].prob_list,self.rmax,1.0]
             else:
                 self.actions[i] = [[1],self.rmax,1.0]
-
-        if self.data['count'] == 0:
-            self.data['goals'] = [self.services.parser.goals[0]]
-        else:
-            if not check_if_goal_in_list(self.data['goals'],self.services.parser.goals[0]):
-                self.data['goals'].append(self.services.parser.goals[0])
+        self.initialize_Q_table()
 
 
 
@@ -106,15 +101,13 @@ class Learner(Executor):
         options = self.services.valid_actions.get()
         hash_state = make_hash_sha256(state)
         if self.services.goal_tracking.reached_all_goals():
-
-
-
-            self.model[hash_state] = {'r':1000, 'q':1000,'actions':{},'visited':1}
-      #      self.data['finish_states'].add(state)
+            try:
+                self.model[hash_state]['q']+=1000
+                self.model[hash_state]['visited']+=1
+            except:
+                self.model[hash_state] = {'r':1000, 'q':1000,'actions':{},'visited':1}
             self.data['finish_states'][hash_state] = state
             self.update_Q_table(self.last_state,self.last_action,hash_state,1000)
-#            self.save_Q_table_to_file(finish = True, finial_state = hash_state)
-
             self.save_Q_table_to_file()
             return None
         if len(options) == 0:
@@ -135,11 +128,9 @@ class Learner(Executor):
 
         self.update_Q_table(self.last_state,self.last_action,hash_state,reward)
         self.last_action = self.change_repeated_action(self.pick_best_option(options,hash_state,reward),options,hash_state)
-    #self.last_action = self.change_repeated_action(self.pick_best_option(options,hash_state,reward),options,hash_state)
         self.last_last_state = self.last_state
         self.last_state = hash_state
-        if self.count > 100:
-            self.planning_step()
+        self.planning_step()
         return self.last_action
 
     def repeated_action(self,action):
@@ -161,7 +152,6 @@ class Learner(Executor):
         return g_action
 
     def semi_softmax(self,x):
-        #return [1.0/len(x)]*len(x)
         min_x = min(x)
         normalize_x = [xi+2*abs(min_x) for xi in x ]
         sum_x = sum(normalize_x)
@@ -172,7 +162,7 @@ class Learner(Executor):
     def get_probs_from_option(self,action):
         return self.actions[action][0]
 
-    def get_probabilistic_per_action(self,actions):
+    def get_probabilistic_per_action(self):
         lst = np.array([i[2] for i in self.actions])
         y = self.semi_softmax(lst)
         r = random.uniform(0, 1)
@@ -281,7 +271,6 @@ class Learner(Executor):
         if self.epsilon**self.model[hash_state]['visited'] < random.uniform(0,1) and len(self.model[hash_state]['actions']) > 0:
             max_option = self.get_best_action(hash_state)
             return max_option
-        #option = self.pick_random_action(options)
         option = self.pick_random_action_with_reward_calc(options)
         action = self.get_action_from_grounded_action(option)
         probs =self.get_probs_from_option(action)
@@ -297,20 +286,9 @@ class Learner(Executor):
         else:
             probs_per_states = self.model[hash_state]['actions'][option]
             self.update_policy(reward,probs_per_states['r'],action)
-        #     if count < 10:
-        #         return self.pick_best_option(options,hash_state,reward,count+1)
-        #     else:
-        #         option = self.pick_random_action(options)
-        # try:
-        #     self.update_policy(reward,probs_per_states['q'],action)
-        #     #self.update_policy(reward,probs_per_states['r'],action)
-        # except:
-        #     x = 2
         return option
 
     def update_policy(self,prev_r,reward,action):
-        # self.actions[action][1] = avg
-        #  self.actions[action][2] = count
         self.actions[action][2]+=1
         self.actions[action][1] += ((reward-prev_r) - self.actions[action][1] )/ self.actions[action][2]
 
@@ -341,7 +319,6 @@ class Learner(Executor):
         for i in self.model[state]['actions']:
 
             if self.model[state]['actions'][i]['r']> max_option_reward or max_action is None:
-                #max_option_reward = self.model[state]['q']
                 max_option_reward = self.model[state]['actions'][i]['r']
                 max_action = i
         return max_option_reward
@@ -361,26 +338,8 @@ class Learner(Executor):
                         self.update_Q_table(state1,action,state,r)
                     except:
                         pass
-
-    #
-    # def save_Q_table_to_file(self, finish = False,finial_state ):
-    #     if finish:
-    #         for q in self.model:
-    #             if len(self.model[q]['actions']) == 0:
-    #                 if q not in self.data['finish_states'].keys():
-    #                     x=5
-    #
-    #
-    #     self.data['model'] = self.model
-    #     a_file = open(self.policy_file, "w")
-    #     start = timer()
-    #     cPickle.dump(self.data, a_file)
-    #     a_file.close()
-    #     print "time to save file: " ,timer() - start , "seconds"
-    #     print "size of the file:" ,float(os.stat(self.policy_file).st_size)/1048576, "MB"
-
     def save_Q_table_to_file(self):
-        self.data['model'] = self.model
+        self.data['models'][self.model_index] = self.model
         a_file = open(self.policy_file, "w")
         start = timer()
         cPickle.dump(self.data, a_file)
@@ -395,12 +354,22 @@ class Learner(Executor):
             self.first_learning = False
             with open(self.policy_file) as file:
                 self.data = cPickle.load(file)
-                self.data['count']+=1
-                self.model = self.data['model']
+            self.data['count']+=1
+            self.model_index = get_goal_index_in_list(self.data['goals'],self.services.parser.goals[0])
 
         else:
             self.first_learning = True
-            self.data = {'count':0, 'finish_states':{},'goals':[]}
             self.model = {self.last_state:{'r':0,'q':0,'actions':{self.last_action:{'tau':1,'r':0,'q':0}},'visited':1}}
+            self.data = {'count':0, 'finish_states':{},'goals':[],'models':[]}
+            self.data['goals'] = [self.services.parser.goals[0]]
+            self.model_index = 0
+        try:
+            self.model = self.data['models'][self.model_index]
+        except:
+            self.model = {self.last_state: {'r': 0, 'q': 0, 'actions': {self.last_action: {'tau': 1, 'r': 0, 'q': 0}},
+                                            'visited': 1}}
+            self.data['models'].append(self.model)
+
+        self.data['start'] = make_hash_sha256(self.services.parser.initial_state)
 
 
