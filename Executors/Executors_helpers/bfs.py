@@ -1,4 +1,3 @@
-
 def get_min_path(pred, dest):
     if dest is None:
         return None
@@ -38,4 +37,3 @@ def bfs(src, graph):
                 queue.append(i)
 
     return pred, dist
-

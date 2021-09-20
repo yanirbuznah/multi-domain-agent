@@ -2,8 +2,6 @@ import random
 import sys
 
 from pddlsim.executors.executor import Executor
-from pddlsim.local_simulator import LocalSimulator
-
 
 from Executors_helpers.bfs import bfs, get_min_path
 
@@ -20,7 +18,6 @@ class BehaviorBaseExecutor(Executor):
         self.sp_graph = {}
         self.graph = {}
         self.find_ball = False
-
 
     def initialize(self, services):
         self.services = services
@@ -101,8 +98,8 @@ class BehaviorBaseExecutor(Executor):
         return goals
 
     def check_validation(self, goal):
-        zip_objects = [(i.args[0],i.args[1]) for i in goal]
-        objects,goal_locations = zip(*zip_objects)
+        zip_objects = [(i.args[0], i.args[1]) for i in goal]
+        objects, goal_locations = zip(*zip_objects)
         # check the number of goals and number of unique objects in goals, if there is less objects then galls ->
         # the goal can not be met
 
@@ -117,7 +114,7 @@ class BehaviorBaseExecutor(Executor):
                         return False
         return True
 
-    def remove_duplicated_goals(self,goal):
+    def remove_duplicated_goals(self, goal):
         objects = [(i.args[0]) for i in goal]
 
         for object in objects:
@@ -126,7 +123,6 @@ class BehaviorBaseExecutor(Executor):
                 goal.pop(i)
                 objects.pop(i)
         return goal
-
 
     def check_best_goals_football(self, goals, start):
         min_weight = float('inf')
@@ -191,7 +187,8 @@ class BehaviorBaseExecutor(Executor):
                     interesting_balls_names = [i[0][0] for i in self.interesting_balls]
                     if move[1] in interesting_balls_names:
                         self.find_ball = True
-                        self.sp_graph = self.find_shortest_path(self.interesting_balls[interesting_balls_names.index(move[1])][0][1])
+                        self.sp_graph = self.find_shortest_path(
+                            self.interesting_balls[interesting_balls_names.index(move[1])][0][1])
             else:
                 valid_actions.append({'name': move[0], 'from': move[1], 'to': move[2]})
 
@@ -247,7 +244,7 @@ class BehaviorBaseExecutor(Executor):
             if len(path) == 0 or move['from'] in path:
                 weight = 0
             else:
-                weight =(move['prob']/len(path))
+                weight = (move['prob'] / len(path))
             weights.append(weight)
         return options[weights.index(max(weights))]
 

@@ -1,6 +1,5 @@
-import hashlib
 import base64
-from time import sleep
+import hashlib
 
 
 def make_hash_sha256(o):
@@ -25,8 +24,8 @@ def make_hashable(o):
 
 import copy
 
-def make_hash(o):
 
+def make_hash(o):
     """
     Makes a hash from a dictionary, list, tuple or set to any level, that contains
     only other hashable types (including any lists, tuples, sets, and

@@ -4,6 +4,7 @@
 
 SUPPORTS_LAPKT = False
 
+
 class CustomizedValidActions():
     def __init__(self, parser, perception):
         self.parser = parser

@@ -26,13 +26,11 @@ class LearningFromPlanExecutor(Executor, Observer):
         self.deterministic_domain = deterministic_domain
 
     def initialize(self, services):
-
         self.num_of_steps = len(self.steps)
         self.services = services
         self.initialize_Q_table()
         self.solve_deterministic_and_update_model()
 
-        # self.apply_revealable_predicates(self.services.)
 
     def solve_deterministic_and_update_model(self):
         state = self.apply_revealable_predicates(self.services.perception.get_state())

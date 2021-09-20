@@ -1,6 +1,6 @@
 import abc
-import random
 import copy
+import random
 
 REACH_GOAL = 'reach-goal'
 
@@ -151,8 +151,9 @@ class PDDL(object):
                     for cur_index, cur_prob in enumerate(cur_action.prob_list):
                         if cur_prob > cur_action.prob_list[max_prob_index]:
                             max_prob_index = cur_index
-                    self.actions[action_name] = (Action(cur_action.name, cur_action.signature, cur_action.addlists[max_prob_index],
-                                                        cur_action.dellists[max_prob_index], cur_action.precondition))
+                    self.actions[action_name] = (
+                        Action(cur_action.name, cur_action.signature, cur_action.addlists[max_prob_index],
+                               cur_action.dellists[max_prob_index], cur_action.precondition))
 
         return parser_copy
 
@@ -378,6 +379,7 @@ class FailureCondition():
     def is_relevant(self, state, action_name):
         return action_name in self.action_names and self.condition.test(state)
 
+
 class RevealablePredicate():
     def __init__(self, condition, effects, probability):
         self.condition = condition
@@ -386,6 +388,7 @@ class RevealablePredicate():
 
     def is_relevant(self, state):
         return self.condition.test(state)
+
 
 class PreconditionFalseError(Exception):
     pass

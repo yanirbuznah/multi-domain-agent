@@ -27,6 +27,7 @@ algorithms = ["--search \"astar(lmcut())\"", "--search \"astar(ipdb())\"", "--se
 
 random.shuffle(algorithms)
 
+
 def decode_dict_vals(dict):
     if dict is None:
         return
@@ -222,7 +223,7 @@ class LearningExecutor(Executor):
     # THE FUNCTION PARSE AND CREATE THE PDDL FILES IN THE CORRECT LOCATION
     def create_files(self, replan):
         global reach_hidden
-        complete_path = os.getcwd()+'/problems/' #+ "/downward/domains_and_problems/"
+        complete_path = os.getcwd() + '/problems/'  # + "/downward/domains_and_problems/"
         if os.path.exists(complete_path + domain_path):
             os.remove(complete_path + domain_path)
         temp_domain = open(complete_path + domain_path, "w")
