@@ -31,7 +31,6 @@ class LearningFromPlanExecutor(Executor, Observer):
         self.initialize_Q_table()
         self.solve_deterministic_and_update_model()
 
-
     def solve_deterministic_and_update_model(self):
         state = self.apply_revealable_predicates(self.services.perception.get_state())
         self.services.parser.generate_problem("problem.pddl", state, self.services.goal_tracking.uncompleted_goals[0])
@@ -89,9 +88,10 @@ class LearningFromPlanExecutor(Executor, Observer):
                             state[predicate_name].remove(entry)
                         except:
                             pass
-                hash_state =make_hash_sha256(state)
-                states[hash_state] ={'r':  self.model[hash_states]['r'], 'q':  self.model[hash_states]['q'], 'actions':  self.model[hash_states]['actions'],
-                'visited':  self.model[hash_states]['visited']}
+                hash_state = make_hash_sha256(state)
+                states[hash_state] = {'r': self.model[hash_states]['r'], 'q': self.model[hash_states]['q'],
+                                      'actions': self.model[hash_states]['actions'],
+                                      'visited': self.model[hash_states]['visited']}
 
         self.model.update(states)
 

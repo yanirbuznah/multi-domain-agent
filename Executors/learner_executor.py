@@ -4,7 +4,6 @@ import sys
 from timeit import default_timer as timer
 
 import numpy as np
-from pddlsim.parser_independent import *
 
 from Executors.Executors_helpers.goals_parser_helpers import *
 from Executors.Executors_helpers.hasing_states import make_hash_sha256
@@ -13,12 +12,12 @@ from executor import Executor
 
 class Learner(Executor):
 
-    def __init__(self, policy_file):
+    def __init__(self, policy_file,min_total_actions):
         super(Learner, self).__init__()
         self.last_state = "dum_state"
         self.last_action = "dum_action"
         self.policy_file = os.path.join(os.getcwd(), os.path.join("policy_files"), policy_file)
-
+        self.min_total_actions = min_total_actions
         self.count = 0
         self.gamma = 0.9
         self.learning_rate = 0.9
@@ -40,7 +39,6 @@ class Learner(Executor):
                 self.actions[i] = [[1], self.rmax, 1.0]
         self.initialize_Q_table()
 
-
     def next_action(self):
         self.count += 1
         state = self.services.perception.get_state()
@@ -61,14 +59,13 @@ class Learner(Executor):
 
         if self.count == 1:
             self.data['start'] = hash_state
-        if self.count % 5000 == 0:
+        if self.count % 1000 == 0:
             self.save_Q_table_to_file()
 
         if hash_state not in self.model:
             reward = q_reward = self.get_reward(self.services.goal_tracking.uncompleted_goals[0], state)
             self.model[hash_state] = {'r': reward, 'q': q_reward, 'actions': {}, 'visited': 1}
         else:
-            q_reward = self.model[hash_state]['q']
             reward = self.model[hash_state]['r']
             self.model[hash_state]['visited'] += 1
 
@@ -124,9 +121,6 @@ class Learner(Executor):
                 self.model[self.last_state]['actions'][self.last_action]['tau'] = 1
         except:
             pass
-
-
-
 
     def repeated_action(self, action):
         return self.last_actions.count(action) > 2
@@ -295,7 +289,7 @@ class Learner(Executor):
             else:
                 max_option = self.get_best_reward(state)
             self.model[last_state]['actions'][last_action]['q'] += self.learning_rate * (
-                        reward + self.gamma * max_option - self.model[last_state]['actions'][last_action]['q'])
+                    reward + self.gamma * max_option - self.model[last_state]['actions'][last_action]['q'])
             q_actions = [self.model[last_state]['actions'][action]['q'] for action in self.model[last_state]['actions']]
             self.model[last_state]['q'] = sum(q_actions) / len(q_actions)
 
@@ -335,6 +329,8 @@ class Learner(Executor):
                         pass
 
     def save_Q_table_to_file(self):
+        # if self.min_total_actions * 3 < self.count:
+        #     return False
         self.data['models'][self.model_index] = self.model
         a_file = open(self.policy_file, "w")
         start = timer()
@@ -342,6 +338,7 @@ class Learner(Executor):
         a_file.close()
         print "time to save file: ", timer() - start, "seconds"
         print "size of the file:", float(os.stat(self.policy_file).st_size) / 1048576, "MB"
+        return True
 
     def initialize_Q_table(self):
         if os.path.exists(self.policy_file) and os.stat(self.policy_file).st_size != 0:

@@ -1,13 +1,11 @@
 import cPickle
 import os
-import random
 import sys
 
 import numpy as np
 
 from Executors.Executors_helpers.goals_parser_helpers import *
 from Executors.Executors_helpers.hasing_states import make_hash_sha256
-from Executors_helpers.customized_valid_actions import CustomizedValidActions
 from executor import Executor
 
 
@@ -317,7 +315,6 @@ class Executive(Executor):
         # else:
         #     self.mc_control(hash_state, 4, 4)
 
-
         if len(self.model[hash_state]['actions']) > 0:
             max_option = self.get_best_action(hash_state)
             return max_option
@@ -351,12 +348,12 @@ class Executive(Executor):
             else:
                 max_option = self.get_best_reward(state)
             self.model[last_state]['actions'][last_action]['q'] += self.learning_rate * (
-                        reward + self.gamma * max_option - self.model[last_state]['actions'][last_action]['q'])
+                    reward + self.gamma * max_option - self.model[last_state]['actions'][last_action]['q'])
             q_actions = [self.model[last_state]['actions'][action]['q'] for action in self.model[last_state]['actions']]
             self.model[last_state]['q'] = sum(q_actions) / len(q_actions)
 
     def get_best_action(self, state):
-        j = random.randint(0,len(self.model[state]['actions'] )-1)
+        j = random.randint(0, len(self.model[state]['actions']) - 1)
         max_action = list(self.model[state]['actions'])[j]
         max_option_reward = self.model[state]['actions'][max_action]['q']
         for i in self.model[state]['actions']:
