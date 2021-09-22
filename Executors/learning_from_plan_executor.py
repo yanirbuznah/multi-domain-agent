@@ -34,9 +34,9 @@ class LearningFromPlanExecutor(Executor, Observer):
 
     def solve_deterministic_and_update_model(self):
         state = self.apply_revealable_predicates(self.services.perception.get_state())
-        steps = self.steps
         self.services.parser.generate_problem("problem.pddl", state, self.services.goal_tracking.uncompleted_goals[0])
         self.make_plan()
+        steps = self.steps[:]
         planning_observable = PlanToModelExecutor(steps, self.model)
         planning_observable.subscribe(self)
         LocalSimulator(print_actions=False, hide_fails=True).run(self.deterministic_domain, 'problem.pddl',
@@ -44,6 +44,9 @@ class LearningFromPlanExecutor(Executor, Observer):
 
     def next_action(self):
         if self.services.goal_tracking.reached_all_goals():
+            state = self.services.perception.get_state()
+            hash_state = make_hash_sha256(state)
+            self.data['finish_states'][hash_state] = state
             self.save_Q_table_to_file()
             return None
         options = self.services.valid_actions.get()
@@ -75,7 +78,25 @@ class LearningFromPlanExecutor(Executor, Observer):
                 state[predicate_name].add(entry)
         return state
 
+    def remove_revealable_predicates(self):
+        states = {}
+        for hash_states in self.model:
+            if 'state' in self.model[hash_states].keys():
+                state = self.model[hash_states]['state']
+                for revealable_predicate in self.services.parser.revealable_predicates:
+                    for (predicate_name, entry) in revealable_predicate.effects:
+                        try:
+                            state[predicate_name].remove(entry)
+                        except:
+                            pass
+                hash_state =make_hash_sha256(state)
+                states[hash_state] ={'r':  self.model[hash_states]['r'], 'q':  self.model[hash_states]['q'], 'actions':  self.model[hash_states]['actions'],
+                'visited':  self.model[hash_states]['visited']}
+
+        self.model.update(states)
+
     def save_Q_table_to_file(self):
+        self.remove_revealable_predicates()
         self.data['models'][self.model_index] = self.model
         a_file = open(self.policy_file, "w")
         start = timer()

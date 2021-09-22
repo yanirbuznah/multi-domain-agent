@@ -40,6 +40,46 @@ class Learner(Executor):
                 self.actions[i] = [[1], self.rmax, 1.0]
         self.initialize_Q_table()
 
+
+    def next_action(self):
+        self.count += 1
+        state = self.services.perception.get_state()
+        options = self.services.valid_actions.get()
+        hash_state = make_hash_sha256(state)
+        if self.services.goal_tracking.reached_all_goals():
+            try:
+                self.model[hash_state]['q'] += 1000
+                self.model[hash_state]['visited'] += 1
+            except:
+                self.model[hash_state] = {'r': 1000, 'q': 1000, 'actions': {}, 'visited': 1}
+            self.data['finish_states'][hash_state] = state
+            self.update_Q_table(self.last_state, self.last_action, hash_state, 1000)
+            self.save_Q_table_to_file()
+            return None
+        if len(options) == 0:
+            return None
+
+        if self.count == 1:
+            self.data['start'] = hash_state
+        if self.count % 5000 == 0:
+            self.save_Q_table_to_file()
+
+        if hash_state not in self.model:
+            reward = q_reward = self.get_reward(self.services.goal_tracking.uncompleted_goals[0], state)
+            self.model[hash_state] = {'r': reward, 'q': q_reward, 'actions': {}, 'visited': 1}
+        else:
+            q_reward = self.model[hash_state]['q']
+            reward = self.model[hash_state]['r']
+            self.model[hash_state]['visited'] += 1
+
+        self.update_Q_table(self.last_state, self.last_action, hash_state, reward)
+        self.last_action = self.change_repeated_action(self.pick_best_option(options, hash_state, reward), options,
+                                                       hash_state)
+        self.last_last_state = self.last_state
+        self.last_state = hash_state
+        self.planning_step()
+        return self.last_action
+
     def get_rmax(self, goal, r=0.0):
         if isinstance(goal, Literal):
             return 1.0
@@ -85,44 +125,8 @@ class Learner(Executor):
         except:
             pass
 
-    def next_action(self):
-        self.count += 1
-        state = self.services.perception.get_state()
-        options = self.services.valid_actions.get()
-        hash_state = make_hash_sha256(state)
-        if self.services.goal_tracking.reached_all_goals():
-            try:
-                self.model[hash_state]['q'] += 1000
-                self.model[hash_state]['visited'] += 1
-            except:
-                self.model[hash_state] = {'r': 1000, 'q': 1000, 'actions': {}, 'visited': 1}
-            self.data['finish_states'][hash_state] = state
-            self.update_Q_table(self.last_state, self.last_action, hash_state, 1000)
-            self.save_Q_table_to_file()
-            return None
-        if len(options) == 0:
-            return None
 
-        if self.count == 1:
-            self.data['start'] = hash_state
-        if self.count % 5000 == 0:
-            self.save_Q_table_to_file()
 
-        if hash_state not in self.model:
-            reward = q_reward = self.get_reward(self.services.goal_tracking.uncompleted_goals[0], state)
-            self.model[hash_state] = {'r': reward, 'q': q_reward, 'actions': {}, 'visited': 1}
-        else:
-            q_reward = self.model[hash_state]['q']
-            reward = self.model[hash_state]['r']
-            self.model[hash_state]['visited'] += 1
-
-        self.update_Q_table(self.last_state, self.last_action, hash_state, reward)
-        self.last_action = self.change_repeated_action(self.pick_best_option(options, hash_state, reward), options,
-                                                       hash_state)
-        self.last_last_state = self.last_state
-        self.last_state = hash_state
-        self.planning_step()
-        return self.last_action
 
     def repeated_action(self, action):
         return self.last_actions.count(action) > 2

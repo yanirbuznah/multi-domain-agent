@@ -1,5 +1,6 @@
 import cPickle
 import os
+import random
 import sys
 
 import numpy as np
@@ -309,13 +310,13 @@ class Executive(Executor):
 
     def pick_best_option(self, options, hash_state, reward):
 
-        if self.cheese_moved:
-            x = self.look_ahed(self.services.perception.get_state(), 2, 5,
-                               CustomizedValidActions(self.services.parser, self.services.perception))
+        # if self.cheese_moved:
+        #     self.look_ahed(self.services.perception.get_state(), 2, 5,
+        #                        CustomizedValidActions(self.services.parser, self.services.perception))
+        #
+        # else:
+        #     self.mc_control(hash_state, 4, 4)
 
-        else:
-            x = self.mc_control(hash_state, 4, 4)
-            fd = 2
 
         if len(self.model[hash_state]['actions']) > 0:
             max_option = self.get_best_action(hash_state)
@@ -355,8 +356,9 @@ class Executive(Executor):
             self.model[last_state]['q'] = sum(q_actions) / len(q_actions)
 
     def get_best_action(self, state):
-        max_option_reward = 0
-        max_action = None
+        j = random.randint(0,len(self.model[state]['actions'] )-1)
+        max_action = list(self.model[state]['actions'])[j]
+        max_option_reward = self.model[state]['actions'][max_action]['q']
         for i in self.model[state]['actions']:
 
             if self.model[state]['actions'][i]['q'] > max_option_reward or max_action is None:

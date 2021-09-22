@@ -28,7 +28,7 @@ class PlanToModelExecutor(Executor, Observable):
             self.model[hash_state]['visited'] += 1
 
         else:
-            self.model[hash_state] = {'r': r, 'q': q, 'actions': {}, 'visited': 1}
+            self.model[hash_state] = {'r': r, 'q': q, 'actions': {}, 'visited': 1,'state':state}
         if self.last_state and self.last_action:
             self.model[self.last_state]['actions'][self.last_action] = {'q': q, 'r': r, hash_state: 1}
         self.last_state = hash_state

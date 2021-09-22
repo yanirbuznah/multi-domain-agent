@@ -3,7 +3,7 @@ import os
 import shutil
 from time import time
 
-from probabilistic_to_determenistic_parser import parser
+from Executors.Executors_helpers.probabilistic_to_determenistic_parser import parser
 
 
 def find_current_files(domain, problem):
