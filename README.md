@@ -1,6 +1,6 @@
 # Multi-Domain-Agent
 
-# Summeay
+# Summary
 Multli domain agent, using pddl files.
 the agent use siw-then-bfsf planner, Dyna-Q+ and Dyna-Q2 (with mc-control) algorithmes, and more..
 
