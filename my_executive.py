@@ -121,10 +121,13 @@ class MyExecutive():
 
         else:
             if self.data['count'][self.model_index] < 50:
-                for i in range(20):
+                if self.deterministic_domain:
                     self.planning()
-                    if i == 5 and not self.data['planning_success'][self.model_index]:
-                        break
+                else:
+                    for i in range(20):
+                        self.planning()
+                        if i == 5 and not self.data['planning_success'][self.model_index]:
+                            break
                 if not self.data['planning_success'][self.model_index]:
                     for i in range(5):
                         self.learning()
