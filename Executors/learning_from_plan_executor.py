@@ -38,8 +38,8 @@ class LearningFromPlanExecutor(Executor, Observer):
         steps = self.steps[:]
         planning_observable = PlanToModelExecutor(steps, self.model)
         planning_observable.subscribe(self)
-        LocalSimulator(print_actions=False, hide_fails=True).run(self.deterministic_domain, 'problem.pddl',
-                                                                 planning_observable)
+        return LocalSimulator(print_actions=False, hide_fails=True).run(self.deterministic_domain, 'problem.pddl',
+                                                                        planning_observable)
 
     def next_action(self):
         if self.services.goal_tracking.reached_all_goals():
@@ -55,7 +55,8 @@ class LearningFromPlanExecutor(Executor, Observer):
             self.action = self.steps.pop(0).lower()
             return self.action
         if len(self.steps) == 0 and len(options) != 0:
-            self.solve_deterministic_and_update_model()
+            if not self.solve_deterministic_and_update_model().success:
+                return None
             if len(self.steps) == 0:
                 return random.choice(options)
             else:

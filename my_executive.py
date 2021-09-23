@@ -22,13 +22,14 @@ class MyExecutive():
         self.flag = flag
         self.domain = domain
         self.problem = problem
+        self.domain_name = domain.split('/')[-1][:-5]
         self.problem_name = problem.split('/')[-1][:-5]
         self.services = self.get_services()
         self.data_path = os.path.join(os.getcwd(), os.path.join("meta_data_files"),
-                                      'my_executive_data_' +  self.problem_name.split('-')[0])
+                                      'my_executive_data_' + self.problem_name.split('-')[0])
         self.init_data()
         self.pre_process()
-        #The problem name will be composed of two parts: "<env>-<task>"
+        # The problem name will be composed of two parts: "<env>-<task>"
         self.policy_file = "policy_file_" + self.problem_name.split('-')[0]
 
     def get_services(self):
@@ -45,16 +46,16 @@ class MyExecutive():
                 self.data = cPickle.load(file)
             self.model_index = get_goal_index_in_list(self.data['goals'], self.services.parser.goals[0])
             try:
-                self.data['count'][self.model_index]+=1
+                self.data['count'][self.model_index] += 1
             except:
                 self.data['count'].append(0)
                 self.data['planning_success'].append(False)
                 self.data['bests'].append(sys.maxint)
 
         else:
-            self.data = {'count': [0], 'goals': [self.services.parser.goals[0]], 'planning_success': [False], 'bests':[sys.maxint]}
+            self.data = {'count': [0], 'goals': [self.services.parser.goals[0]], 'planning_success': [False],
+                         'bests': [sys.maxint]}
             self.model_index = 0
-
 
     def save_data(self):
         a_file = open(self.data_path, "w")
@@ -76,20 +77,20 @@ class MyExecutive():
 
     def create_deterministic_domain(self):
         lines = parser(self.domain)
-        deterministic_domain_name = self.domain[:-5] + "_deterministic" + ".pddl"
+        deterministic_domain_name = "problems_and_domains/"+self.domain_name + "_deterministic" + ".pddl"
         with open(deterministic_domain_name, 'w') as f:
             f.writelines(lines)
         return deterministic_domain_name
 
-    def run_specific_executor(self, return_dict,executor):
+    def run_specific_executor(self, return_dict, executor):
         if executor == 'LearningFromPlanExecutor':
             return_dict['s'] = LocalSimulator().run(domain, problem,
-                                                LearningFromPlanExecutor(self.deterministic_domain, self.policy_file))
+                                                    LearningFromPlanExecutor(self.deterministic_domain,
+                                                                             self.policy_file))
         else:
             return_dict['s'] = LocalSimulator().run(domain, problem, Executive(self.policy_file))
 
-
-    def run_executors(self,return_dict,executor):
+    def run_executors(self, return_dict, executor):
         p = multiprocessing.Process(target=self.run_specific_executor, args=(return_dict, executor))
         p.start()
         p.join(600)
@@ -109,13 +110,12 @@ class MyExecutive():
                 manager = multiprocessing.Manager()
                 return_dict = manager.dict()
 
-                if self.run_executors(return_dict,'LearningFromPlanExecutor'):
+                if self.run_executors(return_dict, 'LearningFromPlanExecutor'):
                     return return_dict['s']
-                if self.run_executors(return_dict,'executiveFromPlan'):
+                if self.run_executors(return_dict, 'executiveFromPlan'):
                     return return_dict['s']
 
-
-            executor = LocalSimulator().run(domain, problem, Executive(self.policy_file+'_learner'))
+            executor = LocalSimulator().run(domain, problem, Executive(self.policy_file + '_learner'))
             if executor.success:
                 return executor
 
@@ -123,11 +123,15 @@ class MyExecutive():
             if self.data['count'][self.model_index] < 50:
                 for i in range(20):
                     self.planning()
+                    if i == 5 and not self.data['planning_success'][self.model_index]:
+                        break
+                if not self.data['planning_success'][self.model_index]:
+                    for i in range(5):
+                        self.learning()
+
             else:
                 for i in range(5):
                     self.learning()
-                    # TODO: remove sleep
-                    sleep(5)
 
     def planning(self):
         planning = LocalSimulator(print_actions=False).run(domain, problem,
@@ -135,14 +139,15 @@ class MyExecutive():
                                                                                     self.policy_file))
         self.data['planning_success'][self.model_index] = planning.success
         self.data['count'][self.model_index] += 1
-        self.data['bests'][self.model_index] = min(planning.total_actions,self.data['bests'][self.model_index])
+        self.data['bests'][self.model_index] = min(planning.total_actions, self.data['bests'][self.model_index])
 
         self.save_data()
 
     def learning(self):
-        learning = LocalSimulator().run(domain, problem, Learner(self.policy_file+'_learner',self.data['bests'][self.model_index]))
+        learning = LocalSimulator().run(domain, problem,
+                                        Learner(self.policy_file + '_learner', self.data['bests'][self.model_index]))
         self.data['count'][self.model_index] += 1
-        self.data['bests'][self.model_index] = min(learning.total_actions,self.data['bests'][self.model_index])
+        self.data['bests'][self.model_index] = min(learning.total_actions, self.data['bests'][self.model_index])
         self.save_data()
 
     def pre_process(self):
@@ -159,8 +164,4 @@ if __name__ == '__main__':
     domain = sys.argv[2]
     problem = sys.argv[3]
     my_executive = MyExecutive(flag, domain, problem)
-    # TODO: Remove for loop
-    for i in range(3):
-        print my_executive.run()
-    my_executive.flag = "-E"
     print my_executive.run()

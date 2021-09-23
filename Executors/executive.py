@@ -4,8 +4,10 @@ import sys
 
 import numpy as np
 
-from Executors.Executors_helpers.goals_parser_helpers import *
-from Executors.Executors_helpers.hasing_states import make_hash_sha256
+from Executors_helpers.config_file import *
+from Executors_helpers.customized_valid_actions import CustomizedValidActions
+from Executors_helpers.goals_parser_helpers import *
+from Executors_helpers.hasing_states import make_hash_sha256
 from executor import Executor
 
 
@@ -18,10 +20,10 @@ class Executive(Executor):
         self.policy_file = os.path.join(os.getcwd(), os.path.join("policy_files"), policy_file)
 
         self.count = 0
-        self.gamma = 0.9
-        self.learning_rate = 0.9
-        self.epsilon = 0.9
-        self.kappa = 0.001
+        self.gamma = GAMMA
+        self.learning_rate = LEARNING_RATE
+        self.epsilon = K_EPSILON
+        self.kappa = KAPPA
         self.last_actions = [self.last_action] * 10
 
     def initialize(self, services):
@@ -308,12 +310,12 @@ class Executive(Executor):
 
     def pick_best_option(self, options, hash_state, reward):
 
-        # if self.cheese_moved:
-        #     self.look_ahed(self.services.perception.get_state(), 2, 5,
-        #                        CustomizedValidActions(self.services.parser, self.services.perception))
-        #
-        # else:
-        #     self.mc_control(hash_state, 4, 4)
+        if self.cheese_moved:
+            self.look_ahed(self.services.perception.get_state(), 2, 5,
+                           CustomizedValidActions(self.services.parser, self.services.perception))
+
+        else:
+            self.mc_control(hash_state, 4, 4)
 
         if len(self.model[hash_state]['actions']) > 0:
             max_option = self.get_best_action(hash_state)

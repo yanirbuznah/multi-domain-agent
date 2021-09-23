@@ -5,6 +5,7 @@ from timeit import default_timer as timer
 
 import numpy as np
 
+from Executors.Executors_helpers.config_file import *
 from Executors.Executors_helpers.goals_parser_helpers import *
 from Executors.Executors_helpers.hasing_states import make_hash_sha256
 from executor import Executor
@@ -12,17 +13,17 @@ from executor import Executor
 
 class Learner(Executor):
 
-    def __init__(self, policy_file,min_total_actions):
+    def __init__(self, policy_file, min_total_actions):
         super(Learner, self).__init__()
         self.last_state = "dum_state"
         self.last_action = "dum_action"
         self.policy_file = os.path.join(os.getcwd(), os.path.join("policy_files"), policy_file)
         self.min_total_actions = min_total_actions
         self.count = 0
-        self.gamma = 0.9
-        self.learning_rate = 0.9
-        self.epsilon = 0.9
-        self.kappa = 0.001
+        self.gamma = GAMMA
+        self.learning_rate = LEARNING_RATE
+        self.epsilon = K_EPSILON
+        self.kappa = KAPPA
         self.last_actions = [self.last_action] * 10
 
     def initialize(self, services):
@@ -329,8 +330,8 @@ class Learner(Executor):
                         pass
 
     def save_Q_table_to_file(self):
-        # if self.min_total_actions * 3 < self.count:
-        #     return False
+        if self.min_total_actions * 3 < self.count:
+            return False
         self.data['models'][self.model_index] = self.model
         a_file = open(self.policy_file, "w")
         start = timer()
