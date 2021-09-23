@@ -24,6 +24,7 @@ class Learner(Executor):
         self.learning_rate = LEARNING_RATE
         self.epsilon = K_EPSILON
         self.kappa = KAPPA
+        self.number_of_planning_step = PLANNING_STEPS
         self.last_actions = [self.last_action] * 10
 
     def initialize(self, services):
@@ -315,7 +316,7 @@ class Learner(Executor):
         return max_option_reward
 
     def planning_step(self):
-        for _ in range(5):
+        for _ in range(self.number_of_planning_step):
             action = ""
             while action == "":
                 state1 = random.choice(list(self.model))
